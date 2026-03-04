@@ -9,7 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "express": "^5.2.1",
     "m": "^1.10.0",
+    "nodemon": "^3.1.14",
     "typescript": "^5.9.3"
   }
 }
