@@ -1,0 +1,346 @@
+// College ERP System - Database Schema
+// Fully Normalized to 3NF
+// Following Functional Dependencies and Candidate Keys
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT (Authentication Layer)
+// ============================================
+
+enum UserRole {
+  ADMIN
+  STUDENT
+  PROFESSOR
+}
+
+model User {
+  user_id      String   @id @default(uuid())
+  email        String   @unique
+  password_hash String
+  role         UserRole
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  student    Student?
+  professor  Professor?
+  admin      Admin?
+
+  @@index([email])
+  @@index([role])
+}
+
+// ============================================
+// DEPARTMENT
+// ============================================
+
+model Department {
+  department_id String   @id @default(uuid())
+  name          String   @unique
+  created_at    DateTime @default(now())
+
+  // Relations
+  students      Student[]
+  professors    Professor[]
+  courses       Course[]
+
+  @@index([name])
+}
+
+// ============================================
+// STUDENT
+// ============================================
+
+model Student {
+  student_id    String   @id @default(uuid())
+  user_id       String   @unique
+  roll_no       String   @unique
+  first_name    String
+  last_name     String
+  date_of_birth DateTime?
+  phone         String?
+  address       String?
+  department_id String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  user          User              @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  department    Department        @relation(fields: [department_id], references: [department_id])
+  enrollments   Enrollment[]
+  attendance    AttendanceRecord[]
+  grades        GradeRecord[]
+  invoices      FeeInvoice[]
+
+  @@index([roll_no])
+  @@index([department_id])
+}
+
+// ============================================
+// PROFESSOR
+// ============================================
+
+model Professor {
+  professor_id  String   @id @default(uuid())
+  user_id       String   @unique
+  emp_no        String   @unique
+  first_name    String
+  last_name     String
+  phone         String?
+  department_id String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  user              User                @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  department        Department          @relation(fields: [department_id], references: [department_id])
+  teachingAssignments TeachingAssignment[]
+
+  @@index([emp_no])
+  @@index([department_id])
+}
+
+// ============================================
+// ADMIN
+// ============================================
+
+model Admin {
+  admin_id   String   @id @default(uuid())
+  user_id    String   @unique
+  first_name String
+  last_name  String
+  created_at DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+// ============================================
+// TERM (Semester/Quarter)
+// ============================================
+
+model Term {
+  term_id    String   @id @default(uuid())
+  name       String   // e.g., "Fall 2024", "Spring 2024"
+  start_date DateTime
+  end_date   DateTime
+  created_at DateTime @default(now())
+
+  // Relations
+  courseOfferings CourseOffering[]
+  invoices        FeeInvoice[]
+
+  @@index([start_date])
+  @@index([end_date])
+}
+
+// ============================================
+// COURSE
+// ============================================
+
+model Course {
+  course_id    String   @id @default(uuid())
+  code         String   @unique // e.g., "CS101"
+  title        String
+  description  String?
+  credits      Int      @default(3)
+  department_id String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  department      Department        @relation(fields: [department_id], references: [department_id])
+  courseOfferings CourseOffering[]
+
+  @@index([code])
+  @@index([department_id])
+}
+
+// ============================================
+// COURSE OFFERING (Course in a specific term)
+// ============================================
+
+model CourseOffering {
+  offering_id String   @id @default(uuid())
+  course_id   String
+  term_id     String
+  section     String   // e.g., "A", "B", "1", "2"
+  capacity    Int      @default(30)
+  created_at  DateTime @default(now())
+
+  // Relations
+  course              Course                @relation(fields: [course_id], references: [course_id], onDelete: Cascade)
+  term                Term                  @relation(fields: [term_id], references: [term_id], onDelete: Cascade)
+  teachingAssignments TeachingAssignment[]
+  enrollments         Enrollment[]
+  classSessions       ClassSession[]
+  assessments         Assessment[]
+
+  @@unique([course_id, term_id, section])
+  @@index([course_id])
+  @@index([term_id])
+}
+
+// ============================================
+// TEACHING ASSIGNMENT (Professor teaches Course Offering)
+// ============================================
+
+model TeachingAssignment {
+  offering_id  String
+  professor_id String
+
+  // Relations
+  offering  CourseOffering @relation(fields: [offering_id], references: [offering_id], onDelete: Cascade)
+  professor Professor      @relation(fields: [professor_id], references: [professor_id], onDelete: Cascade)
+
+  @@id([offering_id, professor_id])
+  @@index([professor_id])
+}
+
+// ============================================
+// ENROLLMENT (Student enrolls in Course Offering)
+// ============================================
+
+model Enrollment {
+  offering_id String
+  student_id  String
+  enrolled_at DateTime @default(now())
+
+  // Relations
+  offering CourseOffering @relation(fields: [offering_id], references: [offering_id], onDelete: Cascade)
+  student  Student        @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+
+  @@id([offering_id, student_id])
+  @@index([student_id])
+}
+
+// ============================================
+// CLASS SESSION (Individual class meeting)
+// ============================================
+
+model ClassSession {
+  session_id  String   @id @default(uuid())
+  offering_id String
+  session_date DateTime
+  topic       String?
+  created_at  DateTime @default(now())
+
+  // Relations
+  offering         CourseOffering      @relation(fields: [offering_id], references: [offering_id], onDelete: Cascade)
+  attendanceRecords AttendanceRecord[]
+
+  @@index([offering_id])
+  @@index([session_date])
+}
+
+// ============================================
+// ATTENDANCE RECORD
+// ============================================
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+model AttendanceRecord {
+  session_id String
+  student_id String
+  status     AttendanceStatus @default(ABSENT)
+  marked_at  DateTime         @default(now())
+
+  // Relations
+  session ClassSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
+  student Student      @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+
+  @@id([session_id, student_id])
+  @@index([student_id])
+}
+
+// ============================================
+// ASSESSMENT (Exam, Quiz, Assignment)
+// ============================================
+
+model Assessment {
+  assessment_id String   @id @default(uuid())
+  offering_id   String
+  name          String
+  type          String   // "Exam", "Quiz", "Assignment", "Project"
+  max_marks     Decimal  @db.Decimal(5, 2)
+  due_date      DateTime?
+  created_at    DateTime @default(now())
+
+  // Relations
+  offering    CourseOffering @relation(fields: [offering_id], references: [offering_id], onDelete: Cascade)
+  gradeRecords GradeRecord[]
+
+  @@index([offering_id])
+}
+
+// ============================================
+// GRADE RECORD
+// ============================================
+
+model GradeRecord {
+  assessment_id String
+  student_id    String
+  marks         Decimal @db.Decimal(5, 2)
+  graded_at     DateTime @default(now())
+
+  // Relations
+  assessment Assessment @relation(fields: [assessment_id], references: [assessment_id], onDelete: Cascade)
+  student    Student    @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+
+  @@id([assessment_id, student_id])
+  @@index([student_id])
+}
+
+// ============================================
+// FEE INVOICE
+// ============================================
+
+model FeeInvoice {
+  invoice_id    String   @id @default(uuid())
+  student_id    String
+  term_id       String
+  total_amount  Decimal  @db.Decimal(10, 2)
+  status        String   @default("PENDING") // "PENDING", "PAID", "PARTIAL"
+  created_at    DateTime @default(now())
+  due_date      DateTime
+
+  // Relations
+  student  Student   @relation(fields: [student_id], references: [student_id], onDelete: Cascade)
+  term     Term      @relation(fields: [term_id], references: [term_id], onDelete: Cascade)
+  payments Payment[]
+
+  @@unique([student_id, term_id])
+  @@index([student_id])
+  @@index([term_id])
+  @@index([status])
+}
+
+// ============================================
+// PAYMENT
+// ============================================
+
+model Payment {
+  payment_id   String   @id @default(uuid())
+  invoice_id  String
+  amount       Decimal  @db.Decimal(10, 2)
+  payment_date DateTime @default(now())
+  payment_method String @default("ONLINE") // "ONLINE", "CASH", "CHEQUE"
+  transaction_id String?
+
+  // Relations
+  invoice FeeInvoice @relation(fields: [invoice_id], references: [invoice_id], onDelete: Cascade)
+
+  @@index([invoice_id])
+  @@index([payment_date])
+}
