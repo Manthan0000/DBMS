@@ -68,7 +68,7 @@ export const POST = requireRole(['ADMIN'])(async (req: NextRequest) => {
     // Hash password
     const passwordHash = await bcrypt.hash(data.password, 10)
 
-    // Create user and student
+    // User + student profile only (no enrollments, sessions, grades, or fee invoices).
     const student = await prisma.student.create({
       data: {
         roll_no: data.rollNo,

@@ -314,8 +314,16 @@ async function main() {
 
   console.log('✅ Created grade records')
 
-  // Create Fee Invoices
+  // Fee invoices only for students with at least one enrollment (matches real workflow:
+  // newly created students have no invoice until enrolled / billed.)
+  const enrolledIds = new Set(
+    (await prisma.enrollment.findMany({ select: { student_id: true } })).map(
+      (e) => e.student_id
+    )
+  )
+
   for (const student of allStudents) {
+    if (!enrolledIds.has(student.student_id)) continue
     await prisma.feeInvoice.create({
       data: {
         student_id: student.student_id,
@@ -327,7 +335,7 @@ async function main() {
     })
   }
 
-  console.log('✅ Created fee invoices')
+  console.log('✅ Created fee invoices (enrolled students only)')
 
   // Create Payments
   const invoices = await prisma.feeInvoice.findMany({

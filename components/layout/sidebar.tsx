@@ -11,8 +11,9 @@ import {
   Calendar,
   FileText,
   CreditCard,
-  Settings,
   LogOut,
+  PlusCircle,
+  UserPlus,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -41,8 +42,10 @@ const studentMenuItems = [
 const professorMenuItems = [
   { href: '/professor', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/professor/courses', label: 'My Courses', icon: BookOpen },
-  { href: '/professor/attendance', label: 'Mark Attendance', icon: Calendar },
-  { href: '/professor/grades', label: 'Enter Grades', icon: FileText },
+  { href: '/professor/offerings', label: 'Create offering', icon: PlusCircle },
+  { href: '/professor/enrollments', label: 'Enroll students', icon: UserPlus },
+  { href: '/professor/attendance', label: 'Sessions & attendance', icon: Calendar },
+  { href: '/professor/grades', label: 'Assessments & grades', icon: FileText },
 ]
 
 export function Sidebar({ role }: SidebarProps) {

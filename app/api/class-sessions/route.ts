@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireRole } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { assessmentSchema } from '@/lib/validations'
+import { classSessionSchema } from '@/lib/validations'
 import {
   getProfessorByUserId,
   getStudentByUserId,
@@ -9,16 +9,15 @@ import {
   professorTeachesOffering,
 } from '@/lib/access'
 
-// GET assessments
 export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
   req: NextRequest,
   user
 ) => {
   try {
     const { searchParams } = new URL(req.url)
-    const offeringIdParam = searchParams.get('offeringId')
+    const offeringId = searchParams.get('offeringId')
 
-    let where: { offering_id?: string | { in: string[] } } | undefined
+    let where: { offering_id?: string | { in: string[] } } = {}
 
     if (user.role === 'STUDENT') {
       const student = await getStudentByUserId(user.userId)
@@ -36,13 +35,13 @@ export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
       if (ids.length === 0) {
         return NextResponse.json({ success: true, data: [] })
       }
-      if (offeringIdParam) {
-        if (!ids.includes(offeringIdParam)) {
+      if (offeringId) {
+        if (!ids.includes(offeringId)) {
           return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
         }
-        where = { offering_id: offeringIdParam }
+        where.offering_id = offeringId
       } else {
-        where = { offering_id: { in: ids } }
+        where.offering_id = { in: ids }
       }
     } else if (user.role === 'PROFESSOR') {
       const prof = await getProfessorByUserId(user.userId)
@@ -56,19 +55,21 @@ export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
       if (oids.length === 0) {
         return NextResponse.json({ success: true, data: [] })
       }
-      if (offeringIdParam) {
-        if (!oids.includes(offeringIdParam)) {
+      if (offeringId) {
+        if (!oids.includes(offeringId)) {
           return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
         }
-        where = { offering_id: offeringIdParam }
+        where.offering_id = offeringId
       } else {
-        where = { offering_id: { in: oids } }
+        where.offering_id = { in: oids }
       }
     } else {
-      where = offeringIdParam ? { offering_id: offeringIdParam } : undefined
+      if (offeringId) {
+        where.offering_id = offeringId
+      }
     }
 
-    const assessments = await prisma.assessment.findMany({
+    const sessions = await prisma.classSession.findMany({
       where,
       include: {
         offering: {
@@ -77,18 +78,11 @@ export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
             term: true,
           },
         },
-        gradeRecords: {
-          include: {
-            student: true,
-          },
-        },
       },
-      orderBy: {
-        due_date: 'asc',
-      },
+      orderBy: { session_date: 'asc' },
     })
 
-    return NextResponse.json({ success: true, data: assessments })
+    return NextResponse.json({ success: true, data: sessions })
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
@@ -97,11 +91,10 @@ export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
   }
 })
 
-// POST create assessment
 export const POST = requireRole(['ADMIN', 'PROFESSOR'])(async (req: NextRequest, user) => {
   try {
     const body = await req.json()
-    const data = assessmentSchema.parse(body)
+    const data = classSessionSchema.parse(body)
 
     if (user.role === 'PROFESSOR') {
       const prof = await getProfessorByUserId(user.userId)
@@ -117,24 +110,23 @@ export const POST = requireRole(['ADMIN', 'PROFESSOR'])(async (req: NextRequest,
       }
     }
 
-    const assessment = await prisma.assessment.create({
+    const session = await prisma.classSession.create({
       data: {
         offering_id: data.offeringId,
-        name: data.name,
-        type: data.type,
-        max_marks: data.maxMarks,
-        due_date: data.dueDate ? new Date(data.dueDate) : null,
+        session_date: new Date(data.sessionDate),
+        topic: data.topic ?? null,
       },
       include: {
         offering: {
           include: {
             course: true,
+            term: true,
           },
         },
       },
     })
 
-    return NextResponse.json({ success: true, data: assessment }, { status: 201 })
+    return NextResponse.json({ success: true, data: session }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },

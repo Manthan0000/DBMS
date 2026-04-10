@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -11,17 +12,10 @@ export default function ProfessorCoursesPage() {
   useEffect(() => {
     async function fetchCourses() {
       try {
-        const res = await fetch('/api/enrollments')
+        const res = await fetch('/api/professor/courses')
         const data = await res.json()
         if (data.success) {
-          // Filter to get unique course offerings
-          const uniqueOfferings = new Map()
-          data.data.forEach((enrollment: any) => {
-            if (!uniqueOfferings.has(enrollment.offering_id)) {
-              uniqueOfferings.set(enrollment.offering_id, enrollment.offering)
-            }
-          })
-          setCourses(Array.from(uniqueOfferings.values()))
+          setCourses(data.data)
         }
       } catch (error) {
         console.error('Failed to fetch courses:', error)
@@ -41,7 +35,9 @@ export default function ProfessorCoursesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">My Courses</h1>
-        <p className="text-muted-foreground">Courses you are teaching</p>
+        <p className="text-muted-foreground">
+          Courses you are teaching. Add class sessions and assessments from each row, or use the sidebar.
+        </p>
       </div>
 
       <Card>
@@ -57,18 +53,42 @@ export default function ProfessorCoursesPage() {
                 <TableHead>Term</TableHead>
                 <TableHead>Section</TableHead>
                 <TableHead>Enrolled Students</TableHead>
+                <TableHead>Planning</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {courses.map((offering) => (
-                <TableRow key={offering.offering_id}>
-                  <TableCell>{offering.course.code}</TableCell>
-                  <TableCell>{offering.course.title}</TableCell>
-                  <TableCell>{offering.term.name}</TableCell>
-                  <TableCell>{offering.section}</TableCell>
-                  <TableCell>{offering.enrollments?.length || 0}</TableCell>
+              {courses.map((c) => (
+                <TableRow key={c.offering_id}>
+                  <TableCell>{c.code}</TableCell>
+                  <TableCell>{c.title}</TableCell>
+                  <TableCell>{c.term}</TableCell>
+                  <TableCell>{c.section}</TableCell>
+                  <TableCell>{c.enrolled ?? 0}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/professor/attendance?offeringId=${c.offering_id}`}
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        Class sessions
+                      </Link>
+                      <Link
+                        href={`/professor/grades?offeringId=${c.offering_id}`}
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        Assessments
+                      </Link>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
+              {courses.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-6 text-center text-muted-foreground">
+                    No teaching assignments yet.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
