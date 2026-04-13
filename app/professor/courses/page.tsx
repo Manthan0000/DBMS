@@ -57,8 +57,8 @@ export default function ProfessorCoursesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {courses.map((c) => (
-                <TableRow key={c.offering_id}>
+              {courses.map((c, idx) => (
+                <TableRow key={c.offering_id} className={`hover:bg-slate-50 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                   <TableCell>{c.code}</TableCell>
                   <TableCell>{c.title}</TableCell>
                   <TableCell>{c.term}</TableCell>

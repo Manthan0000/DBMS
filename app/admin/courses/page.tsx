@@ -144,8 +144,8 @@ export default function CoursesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {courses.map((course) => (
-                <TableRow key={course.course_id}>
+              {courses.map((course, idx) => (
+                <TableRow key={course.course_id} className={`hover:bg-slate-50 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                   <TableCell>{course.code}</TableCell>
                   <TableCell>{course.title}</TableCell>
                   <TableCell>{course.credits}</TableCell>

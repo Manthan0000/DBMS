@@ -65,8 +65,8 @@ export default function StudentGradesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {grades.map((grade) => (
-                <TableRow key={`${grade.assessment_id}-${grade.student_id}`}>
+              {grades.map((grade, idx) => (
+                <TableRow key={`${grade.assessment_id}-${grade.student_id}`} className={`hover:bg-slate-50 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                   <TableCell>{grade.assessment.offering.course.code}</TableCell>
                   <TableCell>{grade.assessment.name}</TableCell>
                   <TableCell>{Number(grade.marks)}</TableCell>

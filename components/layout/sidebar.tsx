@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
   Users,
@@ -18,6 +17,8 @@ import {
 
 interface SidebarProps {
   role: 'ADMIN' | 'STUDENT' | 'PROFESSOR'
+  userName?: string
+  userEmail?: string
 }
 
 const adminMenuItems = [
@@ -26,8 +27,6 @@ const adminMenuItems = [
   { href: '/admin/professors', label: 'Professors', icon: GraduationCap },
   { href: '/admin/courses', label: 'Courses', icon: BookOpen },
   { href: '/admin/enrollments', label: 'Enrollments', icon: Calendar },
-  { href: '/admin/attendance', label: 'Attendance', icon: FileText },
-  { href: '/admin/grades', label: 'Grades', icon: FileText },
   { href: '/admin/fees', label: 'Fees', icon: CreditCard },
 ]
 
@@ -48,7 +47,7 @@ const professorMenuItems = [
   { href: '/professor/grades', label: 'Assessments & grades', icon: FileText },
 ]
 
-export function Sidebar({ role }: SidebarProps) {
+export function Sidebar({ role, userName, userEmail }: SidebarProps) {
   const pathname = usePathname()
 
   const menuItems =
@@ -63,38 +62,98 @@ export function Sidebar({ role }: SidebarProps) {
     window.location.href = '/login'
   }
 
+  const initials = userName
+    ? userName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : role[0]
+
   return (
-    <div className="flex h-screen w-64 flex-col border-r bg-card">
-      <div className="flex h-16 items-center border-b px-6">
-        <h1 className="text-xl font-bold">College ERP</h1>
+    <div
+      className="flex h-screen w-64 flex-col"
+      style={{ background: '#1a2332' }}
+    >
+      {/* Brand */}
+      <div
+        className="flex items-center gap-3 px-5 py-4"
+        style={{ borderBottom: '0.5px solid #2a3547' }}
+      >
+        <div
+          className="flex h-9 w-9 items-center justify-center text-sm font-bold text-white"
+          style={{ background: '#0d9488', borderRadius: '7px' }}
+        >
+          E
+        </div>
+        <div>
+          <h1 className="text-[15px] font-semibold" style={{ color: '#ffffff' }}>
+            College ERP
+          </h1>
+          <p className="text-[11px]" style={{ color: '#64748b' }}>
+            IIIT Vadodara
+          </p>
+        </div>
       </div>
-      <nav className="flex-1 space-y-1 p-4">
+
+      {/* Navigation */}
+      <nav className="flex-1 space-y-0.5 px-3 py-4">
         {menuItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-              )}
+              className="flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors"
+              style={{
+                borderLeft: '2px solid',
+                borderColor: isActive ? '#0d9488' : 'transparent',
+                background: isActive ? 'rgba(13,148,136,0.15)' : 'transparent',
+                color: isActive ? '#5eead4' : '#64748b',
+              }}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-4 w-4" />
               {item.label}
             </Link>
           )
         })}
       </nav>
-      <div className="border-t p-4">
+
+      {/* User + Logout */}
+      <div className="px-4 py-3" style={{ borderTop: '0.5px solid #2a3547' }}>
+        <div className="mb-3 flex items-center gap-3">
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
+            style={{ background: '#0d9488' }}
+          >
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p
+              className="truncate text-[13px] font-medium"
+              style={{ color: '#cbd5e1' }}
+            >
+              {userName || role}
+            </p>
+            {userEmail && (
+              <p
+                className="truncate text-[11px]"
+                style={{ color: '#64748b' }}
+              >
+                {userEmail}
+              </p>
+            )}
+          </div>
+        </div>
         <button
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors hover:opacity-80"
+          style={{ color: '#64748b' }}
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-4 w-4" />
           Logout
         </button>
       </div>

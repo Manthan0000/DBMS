@@ -267,13 +267,18 @@ function ProfessorGradesInner() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {enrollments.map((e) => {
+                {enrollments.map((e, idx) => {
                   const st = e.student_id
                   return (
-                    <TableRow key={st}>
+                    <TableRow key={st} className={`hover:bg-slate-50 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                       <TableCell>{e.student.roll_no}</TableCell>
                       <TableCell>
-                        {e.student.first_name} {e.student.last_name}
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: '#0ea5e9' }}>
+                            {e.student.first_name?.[0]}{e.student.last_name?.[0]}
+                          </span>
+                          {e.student.first_name} {e.student.last_name}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <input

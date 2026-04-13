@@ -104,3 +104,30 @@ export const feeInvoiceStatusSchema = z.object({
   invoiceId: z.string().uuid(),
   status: z.enum(['PENDING', 'PAID', 'PARTIAL']),
 })
+
+// Term creation (admin)
+export const createTermSchema = z
+  .object({
+    name: z.string().min(1, 'Term name is required'),
+    startDate: z.string().min(1, 'Start date is required'),
+    endDate: z.string().min(1, 'End date is required'),
+  })
+  .refine(
+    (data) => {
+      const start = new Date(data.startDate)
+      const end = new Date(data.endDate)
+      return !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end >= start
+    },
+    {
+      message: 'End date must be on or after start date',
+      path: ['endDate'],
+    }
+  )
+
+// Fee invoice creation (admin)
+export const createFeeInvoiceSchema = z.object({
+  studentId: z.string().uuid(),
+  termId: z.string().uuid(),
+  totalAmount: z.number().positive('Total amount must be greater than zero'),
+  dueDate: z.string().min(1, 'Due date is required'),
+})

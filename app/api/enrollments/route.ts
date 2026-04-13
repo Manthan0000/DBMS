@@ -93,20 +93,13 @@ export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
 })
 
 // POST create enrollment
-export const POST = requireRole(['ADMIN', 'STUDENT', 'PROFESSOR'])(async (
+export const POST = requireRole(['ADMIN', 'PROFESSOR'])(async (
   req: NextRequest,
   user
 ) => {
   try {
     const body = await req.json()
     const data = enrollmentSchema.parse(body)
-
-    if (user.role === 'STUDENT') {
-      const student = await getStudentByUserId(user.userId)
-      if (!student || student.student_id !== data.studentId) {
-        return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
-      }
-    }
 
     if (user.role === 'PROFESSOR') {
       const prof = await getProfessorByUserId(user.userId)

@@ -184,11 +184,15 @@ export default function EnrollmentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {enrollments.map((enrollment) => (
-                <TableRow key={`${enrollment.offering_id}-${enrollment.student_id}`}>
+              {enrollments.map((enrollment, idx) => (
+                <TableRow key={`${enrollment.offering_id}-${enrollment.student_id}`} className={`hover:bg-slate-50 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                   <TableCell>
-                    {enrollment.student.first_name} {enrollment.student.last_name} (
-                    {enrollment.student.roll_no})
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: '#0ea5e9' }}>
+                        {enrollment.student.first_name?.[0]}{enrollment.student.last_name?.[0]}
+                      </span>
+                      {enrollment.student.first_name} {enrollment.student.last_name} ({enrollment.student.roll_no})
+                    </div>
                   </TableCell>
                   <TableCell>
                     {enrollment.offering.course.code} - {enrollment.offering.course.title}

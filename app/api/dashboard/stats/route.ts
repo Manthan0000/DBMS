@@ -31,15 +31,7 @@ export const GET = requireAuth(async (req: NextRequest, user) => {
       const student = await prisma.student.findUnique({
         where: { user_id: user.userId },
         include: {
-          enrollments: {
-            include: {
-              offering: {
-                include: {
-                  course: true,
-                },
-              },
-            },
-          },
+          enrollments: true,
           attendance: {
             include: {
               session: true,
@@ -65,8 +57,13 @@ export const GET = requireAuth(async (req: NextRequest, user) => {
         )
       }
 
-      // Calculate attendance percentage
-      const totalSessions = student.attendance.length
+      const enrolledOfferingIds = student.enrollments.map((enrollment) => enrollment.offering_id)
+      const totalSessions =
+        enrolledOfferingIds.length > 0
+          ? await prisma.classSession.count({
+              where: { offering_id: { in: enrolledOfferingIds } },
+            })
+          : 0
       const presentSessions = student.attendance.filter((a) => a.status === 'PRESENT').length
       const attendancePercentage =
         totalSessions > 0 ? (presentSessions / totalSessions) * 100 : 0

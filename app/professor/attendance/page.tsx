@@ -245,20 +245,28 @@ function ProfessorAttendanceInner() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {enrollments.map((e) => {
+                {enrollments.map((e, idx) => {
                   const st = e.student_id
                   const current = records[st]
                   return (
-                    <TableRow key={st}>
+                    <TableRow key={st} className={`hover:bg-slate-50 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                       <TableCell>{e.student.roll_no}</TableCell>
                       <TableCell>
-                        {e.student.first_name} {e.student.last_name}
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: '#0ea5e9' }}>
+                            {e.student.first_name?.[0]}{e.student.last_name?.[0]}
+                          </span>
+                          {e.student.first_name} {e.student.last_name}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {current ? (
                           <span
-                            className={
-                              current === 'PRESENT' ? 'text-green-600' : 'text-red-600'
+                            className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
+                            style={
+                              current === 'PRESENT'
+                                ? { background: '#d1fae5', color: '#065f46' }
+                                : { background: '#fff1ec', color: '#9a3412' }
                             }
                           >
                             {current}

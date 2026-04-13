@@ -149,11 +149,16 @@ export default function ProfessorEnrollmentsPage() {
               <TableBody>
                 {students
                   .filter((s) => enrolledIds.has(s.student_id))
-                  .map((s) => (
-                    <TableRow key={s.student_id}>
+                  .map((s, idx) => (
+                    <TableRow key={s.student_id} className={`hover:bg-slate-50 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                       <TableCell>{s.roll_no}</TableCell>
                       <TableCell>
-                        {s.first_name} {s.last_name}
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: '#0ea5e9' }}>
+                            {s.first_name?.[0]}{s.last_name?.[0]}
+                          </span>
+                          {s.first_name} {s.last_name}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
