@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
         id: fullUser.user_id,
         email: fullUser.email,
         role: fullUser.role,
+        studentId: fullUser.student?.student_id ?? null,
+        professorId: fullUser.professor?.professor_id ?? null,
         student: fullUser.student,
         professor: fullUser.professor,
         admin: fullUser.admin,

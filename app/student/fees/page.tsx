@@ -53,20 +53,21 @@ export default function StudentFeesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {payments.map((payment) => (
-                <TableRow key={payment.payment_id}>
+              {payments.map((payment, idx) => (
+                <TableRow key={payment.payment_id} className={`hover:bg-slate-50 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                   <TableCell>{payment.invoice.term.name}</TableCell>
                   <TableCell>₹{Number(payment.invoice.total_amount).toLocaleString()}</TableCell>
                   <TableCell>₹{Number(payment.amount).toLocaleString()}</TableCell>
                   <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <span
-                      className={
+                      className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
+                      style={
                         payment.invoice.status === 'PAID'
-                          ? 'text-green-600'
+                          ? { background: '#d1fae5', color: '#065f46' }
                           : payment.invoice.status === 'PARTIAL'
-                          ? 'text-yellow-600'
-                          : 'text-red-600'
+                          ? { background: '#fef3c7', color: '#78350f' }
+                          : { background: '#fff1ec', color: '#9a3412' }
                       }
                     >
                       {payment.invoice.status}

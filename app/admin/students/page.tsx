@@ -149,11 +149,16 @@ export default function StudentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {students.map((student) => (
-                <TableRow key={student.student_id}>
+              {students.map((student, idx) => (
+                <TableRow key={student.student_id} className={`hover:bg-slate-50 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                   <TableCell>{student.roll_no}</TableCell>
                   <TableCell>
-                    {student.first_name} {student.last_name}
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: '#0ea5e9' }}>
+                        {student.first_name?.[0]}{student.last_name?.[0]}
+                      </span>
+                      {student.first_name} {student.last_name}
+                    </div>
                   </TableCell>
                   <TableCell>{student.user?.email}</TableCell>
                   <TableCell>{student.department?.name}</TableCell>

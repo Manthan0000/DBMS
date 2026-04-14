@@ -147,11 +147,16 @@ export default function ProfessorsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {professors.map((professor) => (
-                <TableRow key={professor.professor_id}>
+              {professors.map((professor, idx) => (
+                <TableRow key={professor.professor_id} className={`hover:bg-slate-50 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                   <TableCell>{professor.emp_no}</TableCell>
                   <TableCell>
-                    {professor.first_name} {professor.last_name}
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: '#22c55e' }}>
+                        {professor.first_name?.[0]}{professor.last_name?.[0]}
+                      </span>
+                      {professor.first_name} {professor.last_name}
+                    </div>
                   </TableCell>
                   <TableCell>{professor.user?.email}</TableCell>
                   <TableCell>{professor.department?.name}</TableCell>

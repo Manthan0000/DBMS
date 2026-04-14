@@ -37,8 +37,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div
+            className="h-8 w-8 animate-spin rounded-full"
+            style={{ border: '3px solid #e2e8f0', borderTopColor: '#0d9488' }}
+          />
+          <p className="text-sm text-muted-foreground">Loading your dashboard...</p>
+        </div>
       </div>
     )
   }
@@ -47,9 +53,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return null
   }
 
+  // Build a display name from whichever profile exists
+  const profile = user.student || user.professor || user.admin
+  const userName = profile
+    ? `${profile.first_name} ${profile.last_name}`
+    : user.email
+  const userEmail = user.email
+
   return (
     <div className="flex h-screen">
-      <Sidebar role={user.role} />
+      <Sidebar role={user.role} userName={userName} userEmail={userEmail} />
       <main className="flex-1 overflow-y-auto bg-background">
         <div className="container mx-auto p-6">{children}</div>
       </main>

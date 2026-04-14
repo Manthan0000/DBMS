@@ -2,31 +2,136 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireRole } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { attendanceSchema } from '@/lib/validations'
+import {
+  getProfessorByUserId,
+  getStudentByUserId,
+  offeringIdsForProfessor,
+  professorTeachesOffering,
+} from '@/lib/access'
 
 // GET attendance records
-export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (req: NextRequest) => {
+export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
+  req: NextRequest,
+  user
+) => {
   try {
     const { searchParams } = new URL(req.url)
     const sessionId = searchParams.get('sessionId')
-    const studentId = searchParams.get('studentId')
-    const offeringId = searchParams.get('offeringId')
+    const studentIdParam = searchParams.get('studentId')
+    const offeringIdParam = searchParams.get('offeringId')
 
-    let where: any = {}
+    const where: any = {}
 
-    if (sessionId) {
-      where.session_id = sessionId
-    }
+    if (user.role === 'STUDENT') {
+      const student = await getStudentByUserId(user.userId)
+      if (!student) {
+        return NextResponse.json(
+          { success: false, error: 'Student not found' },
+          { status: 404 }
+        )
+      }
+      where.student_id = student.student_id
 
-    if (studentId) {
-      where.student_id = studentId
-    }
+      if (sessionId) {
+        const sess = await prisma.classSession.findUnique({
+          where: { session_id: sessionId },
+          select: { offering_id: true },
+        })
+        if (!sess) {
+          return NextResponse.json({ success: true, data: [] })
+        }
+        const enr = await prisma.enrollment.findUnique({
+          where: {
+            offering_id_student_id: {
+              offering_id: sess.offering_id,
+              student_id: student.student_id,
+            },
+          },
+        })
+        if (!enr) {
+          return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+        }
+        where.session_id = sessionId
+      } else if (offeringIdParam) {
+        const enr = await prisma.enrollment.findUnique({
+          where: {
+            offering_id_student_id: {
+              offering_id: offeringIdParam,
+              student_id: student.student_id,
+            },
+          },
+        })
+        if (!enr) {
+          return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+        }
+        const sessions = await prisma.classSession.findMany({
+          where: { offering_id: offeringIdParam },
+          select: { session_id: true },
+        })
+        where.session_id = { in: sessions.map((s) => s.session_id) }
+      }
+    } else if (user.role === 'PROFESSOR') {
+      const prof = await getProfessorByUserId(user.userId)
+      if (!prof) {
+        return NextResponse.json(
+          { success: false, error: 'Professor not found' },
+          { status: 404 }
+        )
+      }
+      const oids = offeringIdsForProfessor(prof)
+      if (oids.length === 0) {
+        return NextResponse.json({ success: true, data: [] })
+      }
 
-    if (offeringId) {
-      const sessions = await prisma.classSession.findMany({
-        where: { offering_id: offeringId },
-        select: { session_id: true },
-      })
-      where.session_id = { in: sessions.map((s) => s.session_id) }
+      if (sessionId) {
+        const sess = await prisma.classSession.findUnique({
+          where: { session_id: sessionId },
+          select: { offering_id: true },
+        })
+        if (!sess || !oids.includes(sess.offering_id)) {
+          return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+        }
+        where.session_id = sessionId
+      } else {
+        const targetOffering = offeringIdParam
+        if (targetOffering) {
+          if (!oids.includes(targetOffering)) {
+            return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+          }
+          const sessions = await prisma.classSession.findMany({
+            where: { offering_id: targetOffering },
+            select: { session_id: true },
+          })
+          where.session_id = { in: sessions.map((s) => s.session_id) }
+        } else {
+          const sessions = await prisma.classSession.findMany({
+            where: { offering_id: { in: oids } },
+            select: { session_id: true },
+          })
+          where.session_id = { in: sessions.map((s) => s.session_id) }
+        }
+      }
+
+      if (where.session_id?.in?.length === 0) {
+        return NextResponse.json({ success: true, data: [] })
+      }
+
+      if (studentIdParam) {
+        where.student_id = studentIdParam
+      }
+    } else {
+      if (studentIdParam) {
+        where.student_id = studentIdParam
+      }
+      if (sessionId) {
+        where.session_id = sessionId
+      } else if (offeringIdParam) {
+        const sessions = await prisma.classSession.findMany({
+          where: { offering_id: offeringIdParam },
+          select: { session_id: true },
+        })
+        where.session_id = { in: sessions.map((s) => s.session_id) }
+      }
     }
 
     const attendance = await prisma.attendanceRecord.findMany({
@@ -62,7 +167,7 @@ export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (req: Ne
 })
 
 // POST mark attendance
-export const POST = requireRole(['ADMIN', 'PROFESSOR'])(async (req: NextRequest) => {
+export const POST = requireRole(['ADMIN', 'PROFESSOR'])(async (req: NextRequest, user) => {
   try {
     const body = await req.json()
     const data = attendanceSchema.parse(body)
@@ -86,6 +191,20 @@ export const POST = requireRole(['ADMIN', 'PROFESSOR'])(async (req: NextRequest)
         { success: false, error: 'Class session not found' },
         { status: 404 }
       )
+    }
+
+    if (user.role === 'PROFESSOR') {
+      const prof = await getProfessorByUserId(user.userId)
+      if (!prof) {
+        return NextResponse.json(
+          { success: false, error: 'Professor not found' },
+          { status: 404 }
+        )
+      }
+      const ok = await professorTeachesOffering(prof.professor_id, session.offering_id)
+      if (!ok) {
+        return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+      }
     }
 
     if (session.offering.enrollments.length === 0) {

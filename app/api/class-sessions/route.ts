@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireRole } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { enrollmentSchema } from '@/lib/validations'
+import { classSessionSchema } from '@/lib/validations'
 import {
   getProfessorByUserId,
   getStudentByUserId,
@@ -9,17 +9,15 @@ import {
   professorTeachesOffering,
 } from '@/lib/access'
 
-// GET enrollments
 export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
   req: NextRequest,
   user
 ) => {
   try {
     const { searchParams } = new URL(req.url)
-    const studentIdParam = searchParams.get('studentId')
-    const offeringIdParam = searchParams.get('offeringId')
+    const offeringId = searchParams.get('offeringId')
 
-    let where: { student_id?: string; offering_id?: string | { in: string[] } } = {}
+    let where: { offering_id?: string | { in: string[] } } = {}
 
     if (user.role === 'STUDENT') {
       const student = await getStudentByUserId(user.userId)
@@ -29,9 +27,21 @@ export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
           { status: 404 }
         )
       }
-      where.student_id = student.student_id
-      if (offeringIdParam) {
-        where.offering_id = offeringIdParam
+      const enrolled = await prisma.enrollment.findMany({
+        where: { student_id: student.student_id },
+        select: { offering_id: true },
+      })
+      const ids = enrolled.map((e) => e.offering_id)
+      if (ids.length === 0) {
+        return NextResponse.json({ success: true, data: [] })
+      }
+      if (offeringId) {
+        if (!ids.includes(offeringId)) {
+          return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+        }
+        where.offering_id = offeringId
+      } else {
+        where.offering_id = { in: ids }
       }
     } else if (user.role === 'PROFESSOR') {
       const prof = await getProfessorByUserId(user.userId)
@@ -45,45 +55,34 @@ export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
       if (oids.length === 0) {
         return NextResponse.json({ success: true, data: [] })
       }
-      if (offeringIdParam) {
-        if (!oids.includes(offeringIdParam)) {
+      if (offeringId) {
+        if (!oids.includes(offeringId)) {
           return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
         }
-        where.offering_id = offeringIdParam
+        where.offering_id = offeringId
       } else {
         where.offering_id = { in: oids }
       }
-      if (studentIdParam) {
-        where.student_id = studentIdParam
-      }
     } else {
-      if (studentIdParam) where.student_id = studentIdParam
-      if (offeringIdParam) where.offering_id = offeringIdParam
+      if (offeringId) {
+        where.offering_id = offeringId
+      }
     }
 
-    const enrollments = await prisma.enrollment.findMany({
+    const sessions = await prisma.classSession.findMany({
       where,
       include: {
-        student: {
-          include: {
-            department: true,
-          },
-        },
         offering: {
           include: {
             course: true,
             term: true,
-            teachingAssignments: {
-              include: {
-                professor: true,
-              },
-            },
           },
         },
       },
+      orderBy: { session_date: 'asc' },
     })
 
-    return NextResponse.json({ success: true, data: enrollments })
+    return NextResponse.json({ success: true, data: sessions })
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
@@ -92,14 +91,10 @@ export const GET = requireRole(['ADMIN', 'PROFESSOR', 'STUDENT'])(async (
   }
 })
 
-// POST create enrollment
-export const POST = requireRole(['ADMIN', 'PROFESSOR'])(async (
-  req: NextRequest,
-  user
-) => {
+export const POST = requireRole(['ADMIN', 'PROFESSOR'])(async (req: NextRequest, user) => {
   try {
     const body = await req.json()
-    const data = enrollmentSchema.parse(body)
+    const data = classSessionSchema.parse(body)
 
     if (user.role === 'PROFESSOR') {
       const prof = await getProfessorByUserId(user.userId)
@@ -115,52 +110,13 @@ export const POST = requireRole(['ADMIN', 'PROFESSOR'])(async (
       }
     }
 
-    // Check if student is already enrolled
-    const existingEnrollment = await prisma.enrollment.findUnique({
-      where: {
-        offering_id_student_id: {
-          offering_id: data.offeringId,
-          student_id: data.studentId,
-        },
-      },
-    })
-
-    if (existingEnrollment) {
-      return NextResponse.json(
-        { success: false, error: 'Student is already enrolled in this course' },
-        { status: 400 }
-      )
-    }
-
-    // Check capacity
-    const offering = await prisma.courseOffering.findUnique({
-      where: { offering_id: data.offeringId },
-      include: {
-        enrollments: true,
-      },
-    })
-
-    if (!offering) {
-      return NextResponse.json(
-        { success: false, error: 'Course offering not found' },
-        { status: 404 }
-      )
-    }
-
-    if (offering.enrollments.length >= offering.capacity) {
-      return NextResponse.json(
-        { success: false, error: 'Course is full' },
-        { status: 400 }
-      )
-    }
-
-    const enrollment = await prisma.enrollment.create({
+    const session = await prisma.classSession.create({
       data: {
         offering_id: data.offeringId,
-        student_id: data.studentId,
+        session_date: new Date(data.sessionDate),
+        topic: data.topic ?? null,
       },
       include: {
-        student: true,
         offering: {
           include: {
             course: true,
@@ -170,7 +126,7 @@ export const POST = requireRole(['ADMIN', 'PROFESSOR'])(async (
       },
     })
 
-    return NextResponse.json({ success: true, data: enrollment }, { status: 201 })
+    return NextResponse.json({ success: true, data: session }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
